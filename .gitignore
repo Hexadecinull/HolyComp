@@ -1,0 +1,40 @@
+# ── Rust / Cargo ──────────────────────────────────────────────────────────────
+/target/
+**/*.rs.bk
+# Cargo.lock IS committed — we pin transitive dependencies for reproducible builds.
+
+# ── Build artefacts ───────────────────────────────────────────────────────────
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+a.out
+
+# LLVM bitcode / IR
+*.bc
+*.ll
+
+# ── REPL history ─────────────────────────────────────────────────────────────
+.holycomp_history
+
+# ── Editor / IDE ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Test / coverage artefacts ────────────────────────────────────────────────
+lcov.info
+coverage/
+tarpaulin-report.html
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.log
+*.tmp

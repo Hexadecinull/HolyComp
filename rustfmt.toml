@@ -1,0 +1,37 @@
+edition            = "2021"
+max_width          = 100
+tab_spaces         = 4
+hard_tabs          = false
+
+# Imports
+imports_granularity = "Crate"   # group imports: std, external, internal
+group_imports       = "StdExternalCrate"
+reorder_imports     = true
+
+# Blank lines
+blank_lines_upper_bound = 2
+blank_lines_lower_bound = 0
+
+# Trailing commas and semicolons
+trailing_comma    = "Vertical"  # add trailing comma in multi-line lists
+trailing_semicolon = true
+
+# Strings / comments
+wrap_comments     = true
+comment_width     = 100
+normalize_comments = true
+normalize_doc_attributes = true
+
+# Function / struct layout
+fn_single_line    = false
+struct_lit_single_line = true
+where_single_line = false
+
+# Match blocks
+match_block_trailing_comma = true
+match_arm_blocks           = true
+
+# Misc
+use_field_init_shorthand = true
+use_try_shorthand        = true
+force_explicit_abi       = true

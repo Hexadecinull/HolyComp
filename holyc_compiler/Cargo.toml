@@ -1,0 +1,19 @@
+[package]
+name        = "holyc_compiler"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+authors.workspace    = true
+repository.workspace = true
+description = "LLVM-based JIT/AOT compiler backend for HolyC (inkwell)"
+
+[[bin]]
+name = "holyc-compile"
+path = "src/main.rs"
+
+[dependencies]
+holyc_frontend = { workspace = true }
+thiserror = { workspace = true }
+# Re-enable with toolchain >= 1.77:
+# clap = { workspace = true }
+# inkwell = { version = "0.4", features = ["llvm17-0"] }

@@ -1,0 +1,23 @@
+[package]
+name        = "holyc_interpreter"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+authors.workspace    = true
+repository.workspace = true
+description = "Tree-walk interpreter and REPL for HolyC"
+
+[lib]
+name = "holyc_interpreter"
+path = "src/lib.rs"
+
+[[bin]]
+name = "holyc"
+path = "src/main.rs"
+
+[dependencies]
+holyc_frontend = { workspace = true }
+holyc_stdlib   = { workspace = true }
+thiserror = { workspace = true }
+clap      = { workspace = true }
+rustyline = { workspace = true }

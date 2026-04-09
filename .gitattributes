@@ -1,0 +1,42 @@
+# ── Default: normalise line endings to LF in the repo ────────────────────────
+* text=auto eol=lf
+
+# ── Rust source ───────────────────────────────────────────────────────────────
+*.rs      text eol=lf diff=rust
+
+# ── HolyC source (treated as C for syntax highlighting / diff) ───────────────
+*.HC      text eol=lf diff=c linguist-language=C
+*.hc      text eol=lf diff=c linguist-language=C
+
+# ── Config / markup ───────────────────────────────────────────────────────────
+*.toml    text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.txt     text eol=lf
+*.sh      text eol=lf
+
+# ── Windows scripts (keep CRLF on Windows checkouts) ─────────────────────────
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+*.ps1     text eol=crlf
+
+# ── Binary artefacts — never diff or merge ───────────────────────────────────
+*.o       binary
+*.a       binary
+*.so      binary
+*.dylib   binary
+*.dll     binary
+*.exe     binary
+*.bc      binary
+*.wasm    binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+
+# ── GitHub Linguist overrides ─────────────────────────────────────────────────
+# Count Rust as the primary language; don't let test fixtures skew the stats.
+tests/compat/*.HC  linguist-detectable=false

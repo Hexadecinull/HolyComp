@@ -1,0 +1,29 @@
+[workspace]
+members = [
+    "holyc_frontend",
+    "holyc_interpreter",
+    "holyc_compiler",
+    "holyc_stdlib",
+]
+resolver = "2"
+
+[workspace.package]
+version      = "0.1.0"
+edition      = "2021"
+license      = "MIT"
+authors      = ["SSMG4"]
+repository   = "https://github.com/SSMG4/HolyComp"
+rust-version = "1.74"
+
+[workspace.dependencies]
+holyc_frontend = { path = "holyc_frontend" }
+holyc_stdlib   = { path = "holyc_stdlib" }
+thiserror = "1"
+clap      = { version = "4", features = ["derive"] }
+# Disable `with-dirs` (drops the `home` crate which requires edition2024 on
+# Rust < 1.85). History persistence is re-enabled once the toolchain updates.
+rustyline = { version = "14", default-features = false, features = ["custom-bindings", "with-file-history"] }
+
+# ── Pinned transitive dependencies (compatibility with Rust < 1.85) ──────────
+[workspace.dependencies.unicode-segmentation]
+version = "=1.11.0"
