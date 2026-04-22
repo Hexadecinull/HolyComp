@@ -12,7 +12,7 @@ use holyc_interpreter::vm::Interpreter;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn run_source(src: &str, label: &str) -> String {
-    let (output, result) = holyc_stdlib::capture::with_capture(|| {
+    let (output, ()) = holyc_stdlib::capture::with_capture(|| {
         let tokens = Lexer::new(src)
             .tokenize()
             .unwrap_or_else(|e| panic!("{label}: lex error: {e}"));
@@ -24,7 +24,6 @@ fn run_source(src: &str, label: &str) -> String {
             .exec_module(&module)
             .unwrap_or_else(|e| panic!("{label}: runtime error: {e}"));
     });
-    let _ = result;
     output
 }
 

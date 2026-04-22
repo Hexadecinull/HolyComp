@@ -25,6 +25,12 @@ pub struct Interpreter {
     struct_sizes: HashMap<String, u64>,
 }
 
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Interpreter {
     pub fn new() -> Self {
         Self::with_heap_size(DEFAULT_HEAP_SIZE)

@@ -918,7 +918,6 @@ impl Parser {
 
             // Literals
             Token::IntLit(n) => {
-                let n = n;
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::IntLit(n),
@@ -926,7 +925,6 @@ impl Parser {
                 })
             },
             Token::FloatLit(f) => {
-                let f = f;
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::FloatLit(f),
@@ -934,7 +932,6 @@ impl Parser {
                 })
             },
             Token::StringLit(s) => {
-                let s = s;
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::StringLit(s),
@@ -942,7 +939,6 @@ impl Parser {
                 })
             },
             Token::CharLit(c) => {
-                let c = c;
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::CharLit(c),
@@ -973,7 +969,6 @@ impl Parser {
 
             // Identifier
             Token::Ident(name) => {
-                let name = name;
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::Ident(name),

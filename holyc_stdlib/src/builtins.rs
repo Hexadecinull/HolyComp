@@ -391,8 +391,8 @@ mod tests {
 
     #[test]
     fn test_abs_float() {
-        let v = abs(&[Value::Float(-3.14)]).unwrap();
-        assert_eq!(v, Value::Float(3.14));
+        let v = abs(&[Value::Float(-2.5)]).unwrap();
+        assert_eq!(v, Value::Float(2.5));
     }
 
     #[test]

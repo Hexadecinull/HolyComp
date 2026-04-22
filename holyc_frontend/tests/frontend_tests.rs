@@ -27,15 +27,15 @@ fn lex_integer_literals() {
 
 #[test]
 fn lex_float_literal() {
-    let mut lex = Lexer::new("3.14 2.71e10");
+    let mut lex = Lexer::new("1.25 4.0e10");
     let toks: Vec<Token> = lex
         .tokenize()
         .unwrap()
         .into_iter()
         .map(|(t, _)| t)
         .collect();
-    assert!(matches!(toks[0], Token::FloatLit(f) if (f - 3.14).abs() < 1e-9));
-    assert!(matches!(toks[1], Token::FloatLit(f) if (f - 2.71e10).abs() < 1e3));
+    assert!(matches!(toks[0], Token::FloatLit(f) if (f - 1.25).abs() < 1e-9));
+    assert!(matches!(toks[1], Token::FloatLit(f) if (f - 4.0e10).abs() < 1e3));
 }
 
 #[test]

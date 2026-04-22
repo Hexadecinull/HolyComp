@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_float() {
-        let s = format_holyc("%f", &[PrintArg::Float(3.14)]);
-        assert!(s.starts_with("3.14"), "got: {s}");
+        let s = format_holyc("%f", &[PrintArg::Float(2.5)]);
+        assert!(s.starts_with("2.5"), "got: {s}");
     }
 }
