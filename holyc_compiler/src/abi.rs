@@ -40,9 +40,9 @@ pub enum ArgClass {
 /// Classify a [`HolyType`] for the calling convention.
 pub fn classify(ty: &HolyType) -> ArgClass {
     match ty {
-        HolyType::Void                              => ArgClass::Void,
-        HolyType::F32 | HolyType::F64              => ArgClass::Sse,
-        HolyType::Ptr(_) | HolyType::FnPtr { .. }  => ArgClass::Integer,
+        HolyType::Void => ArgClass::Void,
+        HolyType::F32 | HolyType::F64 => ArgClass::Sse,
+        HolyType::Ptr(_) | HolyType::FnPtr { .. } => ArgClass::Integer,
         _ if ty.is_integer() || *ty == HolyType::Bool => ArgClass::Integer,
         HolyType::Array { .. } | HolyType::Named(_) => ArgClass::Memory,
         _ => ArgClass::Memory,
@@ -55,8 +55,8 @@ mod tests {
 
     #[test]
     fn classify_integers() {
-        assert_eq!(classify(&HolyType::I64),  ArgClass::Integer);
-        assert_eq!(classify(&HolyType::U8),   ArgClass::Integer);
+        assert_eq!(classify(&HolyType::I64), ArgClass::Integer);
+        assert_eq!(classify(&HolyType::U8), ArgClass::Integer);
         assert_eq!(classify(&HolyType::Bool), ArgClass::Integer);
     }
 
@@ -73,6 +73,9 @@ mod tests {
 
     #[test]
     fn classify_pointer() {
-        assert_eq!(classify(&HolyType::Ptr(Box::new(HolyType::I64))), ArgClass::Integer);
+        assert_eq!(
+            classify(&HolyType::Ptr(Box::new(HolyType::I64))),
+            ArgClass::Integer
+        );
     }
 }

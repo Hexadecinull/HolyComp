@@ -13,22 +13,31 @@ fn main() {
         None => {
             eprintln!("Usage: holyc-compile <file.HC> [--emit-llvm]");
             std::process::exit(1);
-        }
+        },
     };
     let emit_llvm = args.iter().any(|a| a == "--emit-llvm");
 
     let src = match std::fs::read_to_string(&path) {
         Ok(s) => s,
-        Err(e) => { eprintln!("error: {e}"); std::process::exit(1); }
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(1);
+        },
     };
 
     let tokens = match Lexer::new(&src).tokenize() {
-        Ok(t)  => t,
-        Err(e) => { eprintln!("lex error: {e}"); std::process::exit(1); }
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("lex error: {e}");
+            std::process::exit(1);
+        },
     };
     let module = match HolyParser::new(tokens).parse_module() {
-        Ok(m)  => m,
-        Err(e) => { eprintln!("parse error: {e}"); std::process::exit(1); }
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("parse error: {e}");
+            std::process::exit(1);
+        },
     };
 
     eprintln!(

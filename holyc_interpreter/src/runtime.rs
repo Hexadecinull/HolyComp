@@ -6,8 +6,8 @@
 // Re-export the canonical runtime value type and error from stdlib.
 pub use holyc_stdlib::builtins::{RuntimeError, Value};
 
-use std::collections::HashMap;
 use holyc_frontend::ast::{Param, Stmt};
+use std::collections::HashMap;
 
 // ── Environment (scope chain) ─────────────────────────────────────────────────
 
@@ -18,7 +18,9 @@ pub struct Env {
 
 impl Env {
     pub fn new() -> Self {
-        Env { scopes: vec![HashMap::new()] }
+        Env {
+            scopes: vec![HashMap::new()],
+        }
     }
 
     pub fn push_scope(&mut self) {
@@ -60,7 +62,7 @@ impl Env {
 #[derive(Clone, Debug)]
 pub struct FuncDef {
     pub params: Vec<Param>,
-    pub body:   Vec<Stmt>,
+    pub body: Vec<Stmt>,
 }
 
 /// A builtin function implemented in Rust.
@@ -103,10 +105,10 @@ impl Signal {
 impl std::fmt::Display for Signal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Signal::Return(v)  => write!(f, "return {v}"),
-            Signal::Break      => write!(f, "break"),
-            Signal::Continue   => write!(f, "continue"),
-            Signal::Error(e)   => write!(f, "{e}"),
+            Signal::Return(v) => write!(f, "return {v}"),
+            Signal::Break => write!(f, "break"),
+            Signal::Continue => write!(f, "continue"),
+            Signal::Error(e) => write!(f, "{e}"),
         }
     }
 }

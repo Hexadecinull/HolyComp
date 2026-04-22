@@ -16,7 +16,7 @@ pub struct Ident {
 /// A typed function parameter.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
-    pub ty:   HolyType,
+    pub ty: HolyType,
     pub name: String,
     pub span: Span,
 }
@@ -24,7 +24,7 @@ pub struct Param {
 /// A struct / class field.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    pub ty:   HolyType,
+    pub ty: HolyType,
     pub name: String,
     /// Optional bit-width for bitfields.
     pub bits: Option<u8>,
@@ -36,42 +36,64 @@ pub struct Field {
 pub struct SwitchCase {
     /// `None` = `default:`.
     pub value: Option<Expr>,
-    pub body:  Vec<Stmt>,
-    pub span:  Span,
+    pub body: Vec<Stmt>,
+    pub span: Span,
 }
 
 // ── Operators ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
-    Neg,    // -
-    BitNot, // ~
-    LogNot, // !
-    PreInc, // ++x
-    PreDec, // --x
-    PostInc,// x++
-    PostDec,// x--
-    Deref,  // *x
-    AddrOf, // &x
+    Neg,     // -
+    BitNot,  // ~
+    LogNot,  // !
+    PreInc,  // ++x
+    PreDec,  // --x
+    PostInc, // x++
+    PostDec, // x--
+    Deref,   // *x
+    AddrOf,  // &x
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
     // Arithmetic
-    Add, Sub, Mul, Div, Rem,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
     // Bitwise
-    BitAnd, BitOr, BitXor, Shl, Shr,
+    BitAnd,
+    BitOr,
+    BitXor,
+    Shl,
+    Shr,
     // Logical
-    LogAnd, LogOr,
+    LogAnd,
+    LogOr,
     // Comparison
-    Eq, Ne, Lt, Le, Gt, Ge,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssignOp {
-    Assign,                             // =
-    Add, Sub, Mul, Div, Rem,            // += -= *= /= %=
-    BitAnd, BitOr, BitXor, Shl, Shr,   // &= |= ^= <<= >>=
+    Assign, // =
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem, // += -= *= /= %=
+    BitAnd,
+    BitOr,
+    BitXor,
+    Shl,
+    Shr, // &= |= ^= <<= >>=
 }
 
 // ── Expressions ───────────────────────────────────────────────────────────────
@@ -96,22 +118,50 @@ pub enum ExprKind {
     Ident(String),
 
     // Operations
-    Unary  { op: UnaryOp, operand: Box<Expr> },
-    Binary { op: BinOp, lhs: Box<Expr>, rhs: Box<Expr> },
-    Assign { op: AssignOp, lhs: Box<Expr>, rhs: Box<Expr> },
+    Unary {
+        op: UnaryOp,
+        operand: Box<Expr>,
+    },
+    Binary {
+        op: BinOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+    },
+    Assign {
+        op: AssignOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+    },
 
     // Ternary: `cond ? then : else`
-    Ternary { cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr> },
+    Ternary {
+        cond: Box<Expr>,
+        then: Box<Expr>,
+        else_: Box<Expr>,
+    },
 
     // Calls and subscripting
-    Call  { callee: Box<Expr>, args: Vec<Expr> },
-    Index { base: Box<Expr>, idx: Box<Expr> },
+    Call {
+        callee: Box<Expr>,
+        args: Vec<Expr>,
+    },
+    Index {
+        base: Box<Expr>,
+        idx: Box<Expr>,
+    },
 
     // Member access: `.` and `->`
-    Member { base: Box<Expr>, field: String, is_ptr: bool },
+    Member {
+        base: Box<Expr>,
+        field: String,
+        is_ptr: bool,
+    },
 
     // Cast: `(I32)expr`
-    Cast { ty: HolyType, expr: Box<Expr> },
+    Cast {
+        ty: HolyType,
+        expr: Box<Expr>,
+    },
 
     // sizeof
     SizeOfExpr(Box<Expr>),
@@ -133,7 +183,7 @@ pub enum StmtKind {
 
     /// Variable declaration: `I64 x = 5;`
     VarDecl {
-        ty:   HolyType,
+        ty: HolyType,
         name: String,
         init: Option<Expr>,
     },
@@ -143,16 +193,22 @@ pub enum StmtKind {
 
     /// `if (cond) then_body [else else_body]`
     If {
-        cond:      Expr,
+        cond: Expr,
         then_body: Box<Stmt>,
         else_body: Option<Box<Stmt>>,
     },
 
     /// `while (cond) body`
-    While { cond: Expr, body: Box<Stmt> },
+    While {
+        cond: Expr,
+        body: Box<Stmt>,
+    },
 
     /// `do body while (cond);`
-    DoWhile { body: Box<Stmt>, cond: Expr },
+    DoWhile {
+        body: Box<Stmt>,
+        cond: Expr,
+    },
 
     /// `for (init; cond; step) body`
     For {
@@ -163,7 +219,10 @@ pub enum StmtKind {
     },
 
     /// `switch (expr) { case … }`
-    Switch { expr: Expr, cases: Vec<SwitchCase> },
+    Switch {
+        expr: Expr,
+        cases: Vec<SwitchCase>,
+    },
 
     Break,
     Continue,
@@ -188,25 +247,25 @@ pub enum TopLevelKind {
     /// `RetTy FuncName(Param, …) { body }`
     FuncDef {
         visibility: Visibility,
-        ret_ty:     HolyType,
-        name:       String,
-        params:     Vec<Param>,
-        body:       Vec<Stmt>,
+        ret_ty: HolyType,
+        name: String,
+        params: Vec<Param>,
+        body: Vec<Stmt>,
     },
 
     /// Forward declaration: `RetTy FuncName(Param, …);`
     FuncDecl {
         ret_ty: HolyType,
-        name:   String,
+        name: String,
         params: Vec<Param>,
     },
 
     /// `I64 global_var = expr;`
     GlobalVar {
         visibility: Visibility,
-        ty:         HolyType,
-        name:       String,
-        init:       Option<Expr>,
+        ty: HolyType,
+        name: String,
+        init: Option<Expr>,
     },
 
     /// `class Foo { … };`

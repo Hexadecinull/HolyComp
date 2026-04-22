@@ -38,11 +38,9 @@ thread_local! {
 /// During normal execution this calls `print!`; inside [`with_capture`] it
 /// appends to the capture buffer.
 pub fn output(text: &str) {
-    SINK.with(|cell| {
-        match cell.borrow_mut().as_mut() {
-            Some(buf) => buf.push_str(text),
-            None      => print!("{text}"),
-        }
+    SINK.with(|cell| match cell.borrow_mut().as_mut() {
+        Some(buf) => buf.push_str(text),
+        None => print!("{text}"),
     });
 }
 
@@ -109,11 +107,17 @@ mod tests {
             let (inner, _) = with_capture(|| {
                 output("b\n");
             });
-            assert_eq!(inner, "b\n", "inner capture should only contain inner output");
+            assert_eq!(
+                inner, "b\n",
+                "inner capture should only contain inner output"
+            );
 
             output("c\n");
         });
-        assert_eq!(outer, "a\nc\n", "outer capture must not contain inner output");
+        assert_eq!(
+            outer, "a\nc\n",
+            "outer capture must not contain inner output"
+        );
     }
 
     #[test]

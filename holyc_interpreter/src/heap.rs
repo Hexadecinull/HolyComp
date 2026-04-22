@@ -34,9 +34,7 @@ const HEADER_SIZE: usize = 8; // keep powers-of-two friendly
 
 impl Header {
     fn write_to(self, buf: &mut [u8], offset: usize) {
-        let bytes = (self.size as u64)
-            | ((self.free as u64) << 32)
-            | ((self._pad as u64) << 40);
+        let bytes = (self.size as u64) | ((self.free as u64) << 32) | ((self._pad as u64) << 40);
         buf[offset..offset + 8].copy_from_slice(&bytes.to_le_bytes());
     }
 
@@ -54,11 +52,11 @@ impl Header {
 
 /// The interpreter heap.
 pub struct Heap {
-    buf:      Vec<u8>,
+    buf: Vec<u8>,
     /// Byte offset of the first unallocated region.
-    bump:     usize,
+    bump: usize,
     /// Total number of live (non-freed) allocations.
-    live:     usize,
+    live: usize,
 }
 
 /// Default heap size: 64 MiB — same as TempleOS's default user heap.
@@ -73,7 +71,11 @@ impl Heap {
         // Offset 0 is permanently reserved as the null pointer.
         let mut buf = vec![0u8; capacity];
         buf[0] = 0; // explicit null sentinel
-        Heap { buf, bump: 1, live: 0 }
+        Heap {
+            buf,
+            bump: 1,
+            live: 0,
+        }
     }
 
     // ── Allocation ────────────────────────────────────────────────────────────
@@ -95,8 +97,8 @@ impl Heap {
 
         // Bump allocate.
         let header_start = align_up(self.bump, ALIGN);
-        let data_start   = header_start + HEADER_SIZE;
-        let end          = data_start + size;
+        let data_start = header_start + HEADER_SIZE;
+        let end = data_start + size;
 
         if end > self.buf.len() {
             return Err(RuntimeError::Custom(format!(
@@ -105,8 +107,12 @@ impl Heap {
             )));
         }
 
-        Header { size: size as u32, free: false, _pad: 0 }
-            .write_to(&mut self.buf, header_start);
+        Header {
+            size: size as u32,
+            free: false,
+            _pad: 0,
+        }
+        .write_to(&mut self.buf, header_start);
 
         // Zero the user region.
         self.buf[data_start..end].fill(0);
@@ -122,11 +128,15 @@ impl Heap {
         }
         let header_start = ptr - HEADER_SIZE;
         if header_start >= self.buf.len() {
-            return Err(RuntimeError::Custom(format!("Free(0x{ptr:x}): invalid pointer")));
+            return Err(RuntimeError::Custom(format!(
+                "Free(0x{ptr:x}): invalid pointer"
+            )));
         }
         let mut h = Header::read_from(&self.buf, header_start);
         if h.free {
-            return Err(RuntimeError::Custom(format!("Free(0x{ptr:x}): double-free detected")));
+            return Err(RuntimeError::Custom(format!(
+                "Free(0x{ptr:x}): double-free detected"
+            )));
         }
         h.free = true;
         h.write_to(&mut self.buf, header_start);
@@ -158,7 +168,9 @@ impl Heap {
     /// Read a null-terminated C string from `ptr`.
     pub fn read_cstr(&self, ptr: usize) -> Result<String, RuntimeError> {
         if ptr == 0 {
-            return Err(RuntimeError::Custom("null pointer dereference in string read".into()));
+            return Err(RuntimeError::Custom(
+                "null pointer dereference in string read".into(),
+            ));
         }
         let start = ptr;
         let mut end = start;
@@ -178,7 +190,7 @@ impl Heap {
     /// Returns the pointer to the first byte.
     pub fn intern_str(&mut self, s: &str) -> Result<usize, RuntimeError> {
         let bytes = s.as_bytes();
-        let ptr   = self.alloc(bytes.len() + 1)?; // +1 for NUL
+        let ptr = self.alloc(bytes.len() + 1)?; // +1 for NUL
         self.buf[ptr..ptr + bytes.len()].copy_from_slice(bytes);
         self.buf[ptr + bytes.len()] = 0;
         Ok(ptr)
@@ -202,13 +214,19 @@ impl Heap {
     // ── Diagnostics ───────────────────────────────────────────────────────────
 
     /// How many bytes have been bump-allocated (includes headers + free blocks).
-    pub fn used_bytes(&self) -> usize { self.bump }
+    pub fn used_bytes(&self) -> usize {
+        self.bump
+    }
 
     /// Total heap capacity.
-    pub fn capacity(&self) -> usize { self.buf.len() }
+    pub fn capacity(&self) -> usize {
+        self.buf.len()
+    }
 
     /// Number of live (non-freed) allocations.
-    pub fn live_allocs(&self) -> usize { self.live }
+    pub fn live_allocs(&self) -> usize {
+        self.live
+    }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
@@ -219,9 +237,9 @@ impl Heap {
         if len == 0 {
             return Ok(());
         }
-        let end = ptr.checked_add(len).ok_or_else(|| {
-            RuntimeError::Custom("pointer arithmetic overflow".into())
-        })?;
+        let end = ptr
+            .checked_add(len)
+            .ok_or_else(|| RuntimeError::Custom("pointer arithmetic overflow".into()))?;
         if end > self.buf.len() {
             Err(RuntimeError::Custom(format!(
                 "out-of-bounds heap access: ptr=0x{ptr:x} len={len} heap_size={}",
@@ -238,7 +256,9 @@ impl Heap {
 
         while pos + HEADER_SIZE <= self.bump {
             let h_off = align_up(pos, ALIGN);
-            if h_off + HEADER_SIZE > self.bump { break; }
+            if h_off + HEADER_SIZE > self.bump {
+                break;
+            }
 
             let h = Header::read_from(&self.buf, h_off);
             let data_off = h_off + HEADER_SIZE;
@@ -272,7 +292,9 @@ fn align_up(val: usize, align: usize) -> usize {
 mod tests {
     use super::*;
 
-    fn small() -> Heap { Heap::new(4096) }
+    fn small() -> Heap {
+        Heap::new(4096)
+    }
 
     #[test]
     fn alloc_non_null() {
@@ -299,7 +321,10 @@ mod tests {
         let a_end = a + 16;
         let b_end = b + 16;
         let overlap = a.max(b) < a_end.min(b_end);
-        assert!(!overlap, "allocations a=[{a},{a_end}) and b=[{b},{b_end}) overlap");
+        assert!(
+            !overlap,
+            "allocations a=[{a},{a_end}) and b=[{b},{b_end}) overlap"
+        );
     }
 
     #[test]
@@ -328,7 +353,8 @@ mod tests {
         let q = h.alloc(32).unwrap();
         // Must reuse the freed block, so bump doesn't advance.
         assert_eq!(
-            h.used_bytes(), bump_before,
+            h.used_bytes(),
+            bump_before,
             "reused free block should not advance bump pointer"
         );
         assert_ne!(q, 0);

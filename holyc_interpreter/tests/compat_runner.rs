@@ -40,7 +40,7 @@ fn extract_expected(src: &str) -> Vec<String> {
 
 fn assert_output(label: &str, src: &str) {
     let expected = extract_expected(src);
-    let output   = run_source(src, label);
+    let output = run_source(src, label);
 
     if expected.is_empty() {
         // No EXPECT annotations — just verify clean execution (already done above).
@@ -61,7 +61,8 @@ fn assert_output(label: &str, src: &str) {
 
     for (i, (exp, got)) in expected.iter().zip(got_lines.iter()).enumerate() {
         assert_eq!(
-            exp.as_str(), *got,
+            exp.as_str(),
+            *got,
             "{label}: output line {} mismatch\n  expected: {exp:?}\n  got:      {got:?}",
             i + 1,
         );
@@ -77,7 +78,10 @@ fn compat_hello() {
 
 #[test]
 fn compat_arithmetic() {
-    assert_output("arithmetic.HC", include_str!("../../tests/compat/arithmetic.HC"));
+    assert_output(
+        "arithmetic.HC",
+        include_str!("../../tests/compat/arithmetic.HC"),
+    );
 }
 
 #[test]
@@ -92,10 +96,47 @@ fn compat_switch() {
 
 #[test]
 fn compat_fibonacci() {
-    assert_output("fibonacci.HC", include_str!("../../tests/compat/fibonacci.HC"));
+    assert_output(
+        "fibonacci.HC",
+        include_str!("../../tests/compat/fibonacci.HC"),
+    );
 }
 
 #[test]
 fn compat_pointers() {
-    assert_output("pointers.HC", include_str!("../../tests/compat/pointers.HC"));
+    assert_output(
+        "pointers.HC",
+        include_str!("../../tests/compat/pointers.HC"),
+    );
+}
+
+#[test]
+fn compat_classes() {
+    assert_output("classes.HC", include_str!("../../tests/compat/classes.HC"));
+}
+
+#[test]
+fn compat_strings() {
+    assert_output("strings.HC", include_str!("../../tests/compat/strings.HC"));
+}
+
+#[test]
+fn compat_do_while() {
+    assert_output(
+        "do_while.HC",
+        include_str!("../../tests/compat/do_while.HC"),
+    );
+}
+
+#[test]
+fn compat_globals() {
+    assert_output("globals.HC", include_str!("../../tests/compat/globals.HC"));
+}
+
+#[test]
+fn compat_recursion() {
+    assert_output(
+        "recursion.HC",
+        include_str!("../../tests/compat/recursion.HC"),
+    );
 }

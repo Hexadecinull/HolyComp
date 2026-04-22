@@ -38,9 +38,9 @@ pub enum LexError {
 pub enum ParseError {
     #[error("unexpected token `{found}`, expected {expected} at line {line}")]
     UnexpectedToken {
-        found:    String,
+        found: String,
         expected: String,
-        line:     u32,
+        line: u32,
     },
 
     #[error("unexpected end of file; expected {expected}")]

@@ -27,47 +27,47 @@ impl Value {
     /// Truthy test: mirrors C semantics (0 / null / false == false).
     pub fn is_truthy(&self) -> bool {
         match self {
-            Value::Bool(b)  => *b,
-            Value::Int(n)   => *n != 0,
-            Value::UInt(n)  => *n != 0,
+            Value::Bool(b) => *b,
+            Value::Int(n) => *n != 0,
+            Value::UInt(n) => *n != 0,
             Value::Float(f) => *f != 0.0,
-            Value::Ptr(p)   => *p != 0,
-            Value::Char(c)  => *c != 0,
-            Value::Str(_)   => true,
-            Value::Void     => false,
+            Value::Ptr(p) => *p != 0,
+            Value::Char(c) => *c != 0,
+            Value::Str(_) => true,
+            Value::Void => false,
         }
     }
 
     pub fn type_name(&self) -> &'static str {
         match self {
-            Value::Int(_)   => "I64",
-            Value::UInt(_)  => "U64",
+            Value::Int(_) => "I64",
+            Value::UInt(_) => "U64",
             Value::Float(_) => "F64",
-            Value::Bool(_)  => "Bool",
-            Value::Str(_)   => "U8*",
-            Value::Char(_)  => "U8",
-            Value::Ptr(_)   => "pointer",
-            Value::Void     => "U0",
+            Value::Bool(_) => "Bool",
+            Value::Str(_) => "U8*",
+            Value::Char(_) => "U8",
+            Value::Ptr(_) => "pointer",
+            Value::Void => "U0",
         }
     }
 
     pub fn as_int(&self) -> Option<i64> {
         match self {
-            Value::Int(n)   => Some(*n),
-            Value::UInt(n)  => Some(*n as i64),
-            Value::Bool(b)  => Some(*b as i64),
-            Value::Char(c)  => Some(*c as i64),
-            Value::Ptr(p)   => Some(*p as i64),
-            _               => None,
+            Value::Int(n) => Some(*n),
+            Value::UInt(n) => Some(*n as i64),
+            Value::Bool(b) => Some(*b as i64),
+            Value::Char(c) => Some(*c as i64),
+            Value::Ptr(p) => Some(*p as i64),
+            _ => None,
         }
     }
 
     pub fn as_float(&self) -> Option<f64> {
         match self {
             Value::Float(f) => Some(*f),
-            Value::Int(n)   => Some(*n as f64),
-            Value::UInt(n)  => Some(*n as f64),
-            _               => None,
+            Value::Int(n) => Some(*n as f64),
+            Value::UInt(n) => Some(*n as f64),
+            _ => None,
         }
     }
 }
@@ -75,14 +75,14 @@ impl Value {
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Int(n)   => write!(f, "{n}"),
-            Value::UInt(n)  => write!(f, "{n}"),
+            Value::Int(n) => write!(f, "{n}"),
+            Value::UInt(n) => write!(f, "{n}"),
             Value::Float(v) => write!(f, "{v}"),
-            Value::Bool(b)  => write!(f, "{}", if *b { "TRUE" } else { "FALSE" }),
-            Value::Str(s)   => write!(f, "{s}"),
-            Value::Char(c)  => write!(f, "{}", *c as char),
-            Value::Ptr(p)   => write!(f, "0x{p:x}"),
-            Value::Void     => write!(f, ""),
+            Value::Bool(b) => write!(f, "{}", if *b { "TRUE" } else { "FALSE" }),
+            Value::Str(s) => write!(f, "{s}"),
+            Value::Char(c) => write!(f, "{}", *c as char),
+            Value::Ptr(p) => write!(f, "0x{p:x}"),
+            Value::Void => write!(f, ""),
         }
     }
 }
@@ -107,7 +107,10 @@ pub enum RuntimeError {
 }
 
 fn type_err(expected: &str, found: &str) -> RuntimeError {
-    RuntimeError::TypeError { expected: expected.into(), found: found.into() }
+    RuntimeError::TypeError {
+        expected: expected.into(),
+        found: found.into(),
+    }
 }
 
 fn argc(expected: usize, got: usize) -> RuntimeError {
@@ -132,7 +135,7 @@ pub fn print(args: &[Value]) -> Result<Value, RuntimeError> {
     }
     let output = match &args[0] {
         Value::Str(fmt) => crate::format::format_holyc(fmt, &args[1..]),
-        other           => other.to_string(),
+        other => other.to_string(),
     };
     crate::capture::output(&output);
     Ok(Value::Void)
@@ -149,9 +152,9 @@ pub fn exit(args: &[Value]) -> Result<Value, RuntimeError> {
 /// `Abs(x)` — absolute value (integer or float).
 pub fn abs(args: &[Value]) -> Result<Value, RuntimeError> {
     match args.first().ok_or_else(|| argc(1, 0))? {
-        Value::Int(n)   => Ok(Value::Int(n.wrapping_abs())),
+        Value::Int(n) => Ok(Value::Int(n.wrapping_abs())),
         Value::Float(f) => Ok(Value::Float(f.abs())),
-        other           => Err(type_err("number", other.type_name())),
+        other => Err(type_err("number", other.type_name())),
     }
 }
 
@@ -175,9 +178,11 @@ pub fn sqrt(args: &[Value]) -> Result<Value, RuntimeError> {
 
 /// `Pow(base, exp)` — power.
 pub fn pow(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() < 2 { return Err(argc(2, args.len())); }
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
     let base = require_float(args, 0, "Pow")?;
-    let exp  = require_float(args, 1, "Pow")?;
+    let exp = require_float(args, 1, "Pow")?;
     Ok(Value::Float(base.powf(exp)))
 }
 
@@ -188,13 +193,15 @@ pub fn strlen(args: &[Value]) -> Result<Value, RuntimeError> {
     match args.first().ok_or_else(|| argc(1, 0))? {
         Value::Str(s) => Ok(Value::Int(s.len() as i64)),
         // Ptr case is resolved by the interpreter's heap before reaching here.
-        other         => Err(type_err("string", other.type_name())),
+        other => Err(type_err("string", other.type_name())),
     }
 }
 
 /// `StrCmp(a, b)` — compare two strings (C strcmp semantics: <0, 0, >0).
 pub fn strcmp(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() < 2 { return Err(argc(2, args.len())); }
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
     let a = require_str(&args[0], "StrCmp")?;
     let b = require_str(&args[1], "StrCmp")?;
     Ok(Value::Int(a.cmp(b) as i64))
@@ -203,14 +210,18 @@ pub fn strcmp(args: &[Value]) -> Result<Value, RuntimeError> {
 /// `StrCpy(dst, src)` — copy `src` into `dst`; returns `dst` (as a new String).
 /// In the interpreter this returns the copied string (no raw pointer mutation).
 pub fn strcpy(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() < 2 { return Err(argc(2, args.len())); }
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
     let src = require_str(&args[1], "StrCpy")?.to_owned();
     Ok(Value::Str(src))
 }
 
 /// `StrCat(a, b)` — concatenate two strings; returns the result.
 pub fn strcat(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() < 2 { return Err(argc(2, args.len())); }
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
     let a = require_str(&args[0], "StrCat")?;
     let b = require_str(&args[1], "StrCat")?;
     Ok(Value::Str(format!("{a}{b}")))
@@ -218,12 +229,14 @@ pub fn strcat(args: &[Value]) -> Result<Value, RuntimeError> {
 
 /// `StrStr(haystack, needle)` — find first occurrence; returns index or -1.
 pub fn strstr(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() < 2 { return Err(argc(2, args.len())); }
-    let hay    = require_str(&args[0], "StrStr")?;
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
+    let hay = require_str(&args[0], "StrStr")?;
     let needle = require_str(&args[1], "StrStr")?;
     match hay.find(needle) {
         Some(idx) => Ok(Value::Int(idx as i64)),
-        None      => Ok(Value::Int(-1)),
+        None => Ok(Value::Int(-1)),
     }
 }
 
@@ -243,7 +256,10 @@ thread_local! {
 /// LCG pseudo-random number generator (same constants as glibc rand).
 fn lcg_next() -> u64 {
     RNG_STATE.with(|s| {
-        let next = s.get().wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let next = s
+            .get()
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         s.set(next);
         next
     })
@@ -263,10 +279,14 @@ pub fn rand(_args: &[Value]) -> Result<Value, RuntimeError> {
 
 /// `RandI64(lo, hi)` — random integer in `[lo, hi]` inclusive.
 pub fn rand_range(args: &[Value]) -> Result<Value, RuntimeError> {
-    if args.len() < 2 { return Err(argc(2, args.len())); }
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
     let lo = args[0].as_int().unwrap_or(0);
     let hi = args[1].as_int().unwrap_or(0);
-    if lo >= hi { return Ok(Value::Int(lo)); }
+    if lo >= hi {
+        return Ok(Value::Int(lo));
+    }
     let range = (hi - lo + 1) as u64;
     let r = (lcg_next() % range) as i64 + lo;
     Ok(Value::Int(r))
@@ -301,22 +321,59 @@ pub fn free_stub(_args: &[Value]) -> Result<Value, RuntimeError> {
     Ok(Value::Void)
 }
 
+// ── String formatting ─────────────────────────────────────────────────────────
+
+/// `SPrint(buf, fmt, …)` — format into a String value (interpreter-level).
+///
+/// In real HolyC `buf` is a raw pointer; the interpreter returns the formatted
+/// string as `Value::Str` and ignores the destination pointer.
+pub fn sprint(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
+    let fmt = require_str(&args[1], "SPrint")?;
+    let result = crate::format::format_holyc(fmt, &args[2..]);
+    Ok(Value::Str(result))
+}
+
+// ── Memory comparison ─────────────────────────────────────────────────────────
+
+/// `MemCmp(a, b, len)` — compare two byte slices (value-level stub).
+///
+/// Both arguments must be `Value::Str`; a real heap implementation lives in
+/// `vm.rs`.  Returns negative / zero / positive like C `memcmp`.
+pub fn memcmp_stub(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() < 3 {
+        return Err(argc(3, args.len()));
+    }
+    let a = require_str(&args[0], "MemCmp")?;
+    let b = require_str(&args[1], "MemCmp")?;
+    let len = args[2].as_int().unwrap_or(0) as usize;
+    let a_bytes = a.as_bytes();
+    let b_bytes = b.as_bytes();
+    for i in 0..len {
+        let av = a_bytes.get(i).copied().unwrap_or(0);
+        let bv = b_bytes.get(i).copied().unwrap_or(0);
+        if av != bv {
+            return Ok(Value::Int(av as i64 - bv as i64));
+        }
+    }
+    Ok(Value::Int(0))
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn require_float(args: &[Value], idx: usize, name: &str) -> Result<f64, RuntimeError> {
     args.get(idx)
         .and_then(|v| v.as_float())
-        .ok_or_else(|| RuntimeError::Custom(
-            format!("{name}: argument {idx} must be a number")
-        ))
+        .ok_or_else(|| RuntimeError::Custom(format!("{name}: argument {idx} must be a number")))
 }
 
 fn require_str<'a>(val: &'a Value, name: &str) -> Result<&'a str, RuntimeError> {
     match val {
         Value::Str(s) => Ok(s.as_str()),
-        other => Err(type_err("string", other.type_name())).map_err(|e| RuntimeError::Custom(
-            format!("{name}: {e}")
-        )),
+        other => Err(type_err("string", other.type_name()))
+            .map_err(|e| RuntimeError::Custom(format!("{name}: {e}"))),
     }
 }
 
@@ -438,6 +495,12 @@ mod tests {
     #[test]
     fn test_argc_error() {
         let err = abs(&[]).unwrap_err();
-        assert!(matches!(err, RuntimeError::ArgCount { expected: 1, got: 0 }));
+        assert!(matches!(
+            err,
+            RuntimeError::ArgCount {
+                expected: 1,
+                got: 0
+            }
+        ));
     }
 }

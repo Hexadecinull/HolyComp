@@ -25,18 +25,18 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 
 ---
 
-## Phase 1 — Pointer & Memory Model
+## Phase 1 — Pointer & Memory Model ✅ *Done*
 
 **Goal:** `*ptr`, `&var`, `arr[i]`, `MAlloc` / `Free` fully working in the interpreter.
 
-- [ ] Add a flat heap (`Vec<u8>` + bump allocator) to `Interpreter`
-- [ ] Implement `MAlloc(size)` → real heap address; `Free(ptr)` → mark free
-- [ ] Implement `*ptr` dereference and `&var` address-of in `vm.rs`
-- [ ] Implement `arr[i]` subscript for heap-allocated arrays
-- [ ] String literals → heap-allocated null-terminated bytes; `%s` reads from heap
-- [ ] `MemSet(ptr, val, len)` and `MemCpy(dst, src, len)` real implementations
+- [x] Add a flat heap (`Vec<u8>` + bump allocator) to `Interpreter`
+- [x] Implement `MAlloc(size)` → real heap address; `Free(ptr)` → mark free
+- [x] Implement `*ptr` dereference and `&var` address-of in `vm.rs`
+- [x] Implement `arr[i]` subscript for heap-allocated arrays
+- [x] String literals → heap-allocated null-terminated bytes; `%s` reads from heap
+- [x] `MemSet(ptr, val, len)` and `MemCpy(dst, src, len)` real implementations
 - [ ] Add `--heap-size` CLI flag (default: 64 MiB)
-- [ ] Add `pointer.HC` compat test
+- [x] Add `pointer.HC` compat test
 
 ---
 
@@ -95,12 +95,12 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 
 ## Phase 6 — Standard Library Expansion
 
-- [ ] `StrCpy`, `StrCmp`, `StrCat`, `StrStr`, `StrToI64`
+- [x] `StrCpy`, `StrCmp`, `StrCat`, `StrStr`, `StrToI64`
 - [ ] `FileOpen`, `FileClose`, `FileRead`, `FileWrite`, `FileSeek` (host OS shims)
-- [ ] `Time` / `DateStr` (host clock)
-- [ ] `Rand` / `SRand`
-- [ ] `MemCmp`
-- [ ] `SPrint(buf, fmt, …)` — formatted string to buffer
+- [x] `Time` / `DateStr` (host clock)
+- [x] `Rand` / `SRand`
+- [x] `MemCmp`
+- [x] `SPrint(buf, fmt, …)` — formatted string to buffer
 - [ ] Document every builtin in `docs/stdlib.md`
 
 ---
@@ -128,8 +128,9 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 
 | Version | Milestone                          |
 |---------|------------------------------------|
-| 0.1     | Phase 0 complete (current)         |
-| 0.2     | Phase 1 + 2 complete               |
+| 0.1     | Phase 0 complete                   |
+| 0.2     | Phase 1 complete (current)         |
+| 0.3-dev | Phase 2 in progress                |
 | 0.3     | Phase 3 — JIT working              |
 | 0.4     | Phase 4 — AOT working              |
 | 0.5     | Phase 5 + 6                        |
