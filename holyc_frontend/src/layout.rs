@@ -140,9 +140,8 @@ impl TypeEnv {
             let size = self.size_of(&resolved).unwrap_or(8);
             let align = self.align_of(&resolved);
 
-            // Align the current offset up to this field's alignment.
-            // Round up to the next multiple of `align` using only division.
-            offset = (offset + align - 1) / align * align;
+            // Round offset up to this field's alignment.
+            offset = offset.div_ceil(align) * align;
 
             out_fields.push((
                 fname.clone(),
@@ -159,11 +158,8 @@ impl TypeEnv {
             }
         }
 
-        // Round total size up to struct alignment.
-        // Round total size up to struct alignment.
-        if struct_align > 0 {
-            offset = (offset + struct_align - 1) / struct_align * struct_align;
-        }
+        // Round total size up to struct alignment (struct_align >= 1 always).
+        offset = offset.div_ceil(struct_align) * struct_align;
 
         let layout = StructLayout {
             size: offset,
