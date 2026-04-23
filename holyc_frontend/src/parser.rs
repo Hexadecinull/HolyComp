@@ -16,6 +16,9 @@ pub struct Parser {
     cursor: usize,
     /// Original source text, used to reconstruct verbatim `asm { … }` bodies.
     src: Option<String>,
+    /// Type names introduced by `class` and `typedef` so the parser can
+    /// distinguish `MyType var;` (declaration) from an expression statement.
+    known_types: std::collections::HashSet<String>,
 }
 
 impl Parser {
@@ -24,6 +27,7 @@ impl Parser {
             tokens,
             cursor: 0,
             src: None,
+            known_types: std::collections::HashSet::new(),
         }
     }
 
@@ -34,6 +38,7 @@ impl Parser {
             tokens,
             cursor: 0,
             src: Some(src.into()),
+            known_types: std::collections::HashSet::new(),
         }
     }
 
@@ -221,6 +226,7 @@ impl Parser {
         }
         self.expect(Token::RBrace, "`}` to close class body")?;
         let _ = self.eat(Token::Semi);
+        self.known_types.insert(name.clone());
         Ok(TopLevel {
             kind: TopLevelKind::ClassDef { name, fields },
             span: (start, self.prev_span().1),
@@ -232,6 +238,7 @@ impl Parser {
         let ty = self.parse_type()?;
         let alias = self.expect_ident("typedef alias")?;
         self.expect(Token::Semi, "`;` after typedef")?;
+        self.known_types.insert(alias.clone());
         Ok(TopLevel {
             kind: TopLevelKind::TypeDef { ty, alias },
             span: (start, self.prev_span().1),
@@ -554,7 +561,7 @@ impl Parser {
         }
 
         // Declaration: starts with a type keyword or a known identifier type
-        if self.cur_tok().is_type_keyword() {
+        if self.is_type_start() {
             let ty = self.parse_type()?;
             let name = self.expect_ident("variable name")?;
             // Optional array size
@@ -602,7 +609,7 @@ impl Parser {
     /// Parse a statement that does NOT consume the trailing `;` (for `for` init).
     fn parse_stmt_no_semi(&mut self) -> Result<Stmt, ParseError> {
         let start = self.cur_span().0;
-        if self.cur_tok().is_type_keyword() {
+        if self.is_type_start() {
             let ty = self.parse_type()?;
             let name = self.expect_ident("variable name")?;
             let init = if self.eat(Token::Eq) {
@@ -878,7 +885,7 @@ impl Parser {
                 self.advance();
                 self.expect(Token::LParen, "`(` after sizeof")?;
                 // Try to parse as type; fall back to expression
-                let kind = if self.cur_tok().is_type_keyword() {
+                let kind = if self.is_type_start() {
                     let ty = self.parse_type()?;
                     ExprKind::SizeOfType(ty)
                 } else {
@@ -896,7 +903,7 @@ impl Parser {
             Token::LParen => {
                 self.advance();
                 // Cast: `(TypeKeyword)`
-                if self.cur_tok().is_type_keyword() {
+                if self.is_type_start() {
                     let ty = self.parse_type()?;
                     self.expect(Token::RParen, "`)` after cast type")?;
                     let e = self.parse_pratt(30)?;
@@ -1010,6 +1017,14 @@ impl Parser {
 
     fn is_eof(&self) -> bool {
         self.cursor >= self.tokens.len() || *self.cur_tok() == Token::Eof
+    }
+
+    /// Returns `true` if the current token begins a type: either a primitive
+    /// type keyword (`I64`, `U8`, …) or a named type registered by a prior
+    /// `class` / `typedef` declaration.
+    fn is_type_start(&self) -> bool {
+        self.cur_tok().is_type_keyword()
+            || matches!(self.cur_tok(), Token::Ident(name) if self.known_types.contains(name))
     }
 
     fn advance(&mut self) {

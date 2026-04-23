@@ -12,19 +12,32 @@ use holyc_interpreter::vm::Interpreter;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn run_source(src: &str, label: &str) -> String {
-    let (output, ()) = holyc_stdlib::capture::with_capture(|| {
-        let tokens = Lexer::new(src)
-            .tokenize()
-            .unwrap_or_else(|e| panic!("{label}: lex error: {e}"));
-        let module = Parser::new(tokens)
-            .parse_module()
-            .unwrap_or_else(|e| panic!("{label}: parse error: {e}"));
-        let mut interp = Interpreter::new();
-        interp
-            .exec_module(&module)
-            .unwrap_or_else(|e| panic!("{label}: runtime error: {e}"));
-    });
-    output
+    // Run inside a thread with an enlarged stack so that HolyC programs with
+    // moderate recursion depth don't overflow the default 8 MiB test stack.
+    // The interpreter's own MAX_CALL_DEPTH guard (512 frames) fires long before
+    // we approach the 64 MiB limit here.
+    let src = src.to_owned();
+    let label = label.to_owned();
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(move || {
+            let (output, ()) = holyc_stdlib::capture::with_capture(|| {
+                let tokens = Lexer::new(&src)
+                    .tokenize()
+                    .unwrap_or_else(|e| panic!("{label}: lex error: {e}"));
+                let module = Parser::new(tokens)
+                    .parse_module()
+                    .unwrap_or_else(|e| panic!("{label}: parse error: {e}"));
+                let mut interp = Interpreter::new();
+                interp
+                    .exec_module(&module)
+                    .unwrap_or_else(|e| panic!("{label}: runtime error: {e}"));
+            });
+            output
+        })
+        .expect("thread spawn failed")
+        .join()
+        .expect("test thread panicked")
 }
 
 fn extract_expected(src: &str) -> Vec<String> {
@@ -138,4 +151,9 @@ fn compat_recursion() {
         "recursion.HC",
         include_str!("../../tests/compat/recursion.HC"),
     );
+}
+
+#[test]
+fn compat_structs() {
+    assert_output("structs.HC", include_str!("../../tests/compat/structs.HC"));
 }

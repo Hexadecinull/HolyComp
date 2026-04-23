@@ -7,6 +7,8 @@
 use std::collections::HashMap;
 
 use holyc_frontend::ast::{AssignOp, BinOp, ExprKind, Module, StmtKind, TopLevelKind, UnaryOp};
+use holyc_frontend::layout::TypeEnv;
+use holyc_frontend::types::HolyType;
 
 use crate::heap::{Heap, DEFAULT_HEAP_SIZE};
 use crate::runtime::{Callable, Env, FuncDef, Signal};
@@ -21,8 +23,8 @@ pub struct Interpreter {
     funcs: HashMap<String, Callable>,
     pub heap: Heap,
     call_depth: usize,
-    /// Byte sizes of named struct/class types registered by `class` definitions.
-    struct_sizes: HashMap<String, u64>,
+    /// Type environment: struct layouts + typedef aliases.
+    pub type_env: TypeEnv,
 }
 
 impl Default for Interpreter {
@@ -42,7 +44,7 @@ impl Interpreter {
             funcs: HashMap::new(),
             heap: Heap::new(heap_bytes),
             call_depth: 0,
-            struct_sizes: HashMap::new(),
+            type_env: TypeEnv::new(),
         };
         interp.register_builtins();
         interp
@@ -109,8 +111,14 @@ impl Interpreter {
                     );
                 },
                 TopLevelKind::ClassDef { name, fields } => {
-                    let size: u64 = fields.iter().map(|f| f.ty.size_of().unwrap_or(8)).sum();
-                    self.struct_sizes.insert(name.clone(), size);
+                    let raw: Vec<(String, HolyType)> = fields
+                        .iter()
+                        .map(|f| (f.name.clone(), f.ty.clone()))
+                        .collect();
+                    self.type_env.compute_layout(name.clone(), &raw);
+                },
+                TopLevelKind::TypeDef { ty, alias } => {
+                    self.type_env.add_typedef(alias.clone(), ty.clone());
                 },
                 _ => {},
             }
@@ -272,10 +280,38 @@ impl Interpreter {
                 self.eval_expr(expr).map_err(Signal::Error)?;
             },
 
-            StmtKind::VarDecl { name, init, .. } => {
-                let val = match init {
-                    Some(e) => self.eval_expr(e).map_err(Signal::Error)?,
-                    None => Value::Int(0),
+            StmtKind::VarDecl { ty, name, init } => {
+                // For struct-typed variables, allocate on the heap and bind a Ptr.
+                let resolved_ty = self.type_env.resolve(ty);
+                let val = if let HolyType::Named(struct_name) = &resolved_ty {
+                    if let Some(layout) = self.type_env.structs.get(struct_name).cloned() {
+                        let ptr = self
+                            .heap
+                            .alloc(layout.size as usize)
+                            .map_err(Signal::Error)?;
+                        // If there's an initialiser expression it must be a
+                        // pointer to another struct; copy field-by-field.
+                        if let Some(e) = init {
+                            let src = self.eval_expr(e).map_err(Signal::Error)?;
+                            if let Value::Ptr(src_ptr) = src {
+                                self.heap
+                                    .memcpy(ptr, src_ptr, layout.size as usize)
+                                    .map_err(Signal::Error)?;
+                            }
+                        }
+                        Value::Ptr(ptr)
+                    } else {
+                        // Unknown named type — fall back to 0 / expression
+                        match init {
+                            Some(e) => self.eval_expr(e).map_err(Signal::Error)?,
+                            None => Value::Int(0),
+                        }
+                    }
+                } else {
+                    match init {
+                        Some(e) => self.eval_expr(e).map_err(Signal::Error)?,
+                        None => Value::Int(0),
+                    }
                 };
                 self.env.define(name.clone(), val);
             },
@@ -455,13 +491,7 @@ impl Interpreter {
             ExprKind::Cast { expr, .. } => self.eval_expr(expr),
 
             ExprKind::SizeOfType(ty) => {
-                use holyc_frontend::types::HolyType;
-                let size = match ty {
-                    HolyType::Named(name) => {
-                        self.struct_sizes.get(name.as_str()).copied().unwrap_or(0)
-                    },
-                    _ => ty.size_of().unwrap_or(0),
-                };
+                let size = self.type_env.size_of(ty).unwrap_or(0);
                 Ok(Value::UInt(size))
             },
             ExprKind::SizeOfExpr(e) => {
@@ -496,10 +526,68 @@ impl Interpreter {
                 Ok(Value::Int(raw as i64))
             },
 
-            // Member access is a Phase 2 item (needs struct layout engine).
-            ExprKind::Member { .. } => Err(RuntimeError::Custom(
-                "member access requires struct layout support (Phase 2)".into(),
-            )),
+            // Member access: `base.field` or `base->field`
+            ExprKind::Member {
+                base,
+                field,
+                is_ptr,
+            } => {
+                let base_val = self.eval_expr(base)?;
+
+                // Resolve the heap pointer to the start of the struct.
+                let struct_ptr = match (is_ptr, &base_val) {
+                    // `->` : base is a pointer to a struct
+                    (true, Value::Ptr(0)) => {
+                        return Err(RuntimeError::Custom(
+                            "null pointer dereference in member access".into(),
+                        ))
+                    },
+                    (true, Value::Ptr(p)) => *p,
+                    (true, Value::Int(n)) if *n > 0 => *n as usize,
+                    // `.` : struct was heap-allocated; variable holds a Ptr
+                    (false, Value::Ptr(p)) => *p,
+                    _ => {
+                        return Err(RuntimeError::Custom(format!(
+                            "member access `{}{}`: expected a struct pointer, got {}",
+                            if *is_ptr { "->" } else { "." },
+                            field,
+                            base_val.type_name(),
+                        )))
+                    },
+                };
+
+                // Find the field layout by scanning all structs.
+                // We prefer the deepest match (most-recently-defined struct that
+                // has the field), which is the natural resolution order.
+                let field_layout = self
+                    .type_env
+                    .structs
+                    .values()
+                    .filter_map(|layout| layout.field(field))
+                    .last()
+                    .cloned()
+                    .ok_or_else(|| RuntimeError::Custom(format!("unknown field `{field}`")))?;
+
+                let addr = struct_ptr + field_layout.offset as usize;
+
+                // Struct-typed fields: return a pointer to the sub-object so
+                // chained access (e.g. `line.a.x`) works naturally.
+                if let HolyType::Named(_) = &field_layout.ty {
+                    return Ok(Value::Ptr(addr));
+                }
+
+                let raw = self.heap.read_uint(addr, field_layout.size as usize)?;
+                Ok(match &field_layout.ty {
+                    HolyType::F64 => Value::Float(f64::from_bits(raw)),
+                    HolyType::F32 => Value::Float(f32::from_bits(raw as u32) as f64),
+                    HolyType::Bool => Value::Bool(raw != 0),
+                    HolyType::U8 | HolyType::U16 | HolyType::U32 | HolyType::U64 => {
+                        Value::UInt(raw)
+                    },
+                    HolyType::Ptr(_) | HolyType::FnPtr { .. } => Value::Ptr(raw as usize),
+                    _ => Value::Int(raw as i64),
+                })
+            },
         }
     }
 
@@ -738,6 +826,111 @@ impl Interpreter {
                 },
             };
             self.heap.write_uint(ptr, 8, raw)?;
+            return Ok(rval);
+        }
+
+        // ── Member assignment: base.field = rval  or  ptr->field = rval ────────
+        if let ExprKind::Member {
+            base,
+            field,
+            is_ptr,
+        } = &lhs.kind
+        {
+            if op != AssignOp::Assign {
+                return Err(RuntimeError::Custom(
+                    "compound assignment to struct field not yet supported".into(),
+                ));
+            }
+            let base_val = self.eval_expr(base)?;
+            let struct_ptr = if *is_ptr {
+                match base_val {
+                    Value::Ptr(0) => {
+                        return Err(RuntimeError::Custom(
+                            "null pointer dereference in member write".into(),
+                        ))
+                    },
+                    Value::Ptr(p) => p,
+                    Value::Int(n) if n > 0 => n as usize,
+                    _ => {
+                        return Err(RuntimeError::Custom(
+                            "member `->`: base must be a pointer".into(),
+                        ))
+                    },
+                }
+            } else {
+                match base_val {
+                    Value::Ptr(p) => p,
+                    _ => {
+                        return Err(RuntimeError::Custom(
+                            "member `.`: base must be heap-allocated".into(),
+                        ))
+                    },
+                }
+            };
+            let field_layout = self
+                .type_env
+                .structs
+                .values()
+                .find_map(|layout| layout.field(field))
+                .cloned()
+                .ok_or_else(|| RuntimeError::Custom(format!("unknown field `{field}`")))?;
+
+            let rval = self.eval_expr(rhs)?;
+            let raw = match &rval {
+                Value::Int(n) => *n as u64,
+                Value::UInt(n) => *n,
+                Value::Float(f) => f.to_bits(),
+                Value::Ptr(p) => *p as u64,
+                Value::Bool(b) => *b as u64,
+                Value::Char(c) => *c as u64,
+                _ => {
+                    return Err(RuntimeError::Custom(
+                        "member write: unsupported value type".into(),
+                    ))
+                },
+            };
+            let addr = struct_ptr + field_layout.offset as usize;
+            self.heap
+                .write_uint(addr, field_layout.size as usize, raw)?;
+            return Ok(rval);
+        }
+
+        // ── Index assignment: arr[i] = rval ───────────────────────────────────
+        if let ExprKind::Index { base, idx } = &lhs.kind {
+            if op != AssignOp::Assign {
+                return Err(RuntimeError::Custom(
+                    "compound assignment through subscript not yet supported".into(),
+                ));
+            }
+            let base_val = self.eval_expr(base)?;
+            let idx_val = self.eval_expr(idx)?;
+            let ptr = match base_val {
+                Value::Ptr(p) => p,
+                Value::Int(n) => n as usize,
+                _ => {
+                    return Err(RuntimeError::Custom(
+                        "subscript assign: base must be a pointer".into(),
+                    ))
+                },
+            };
+            let i = idx_val
+                .as_int()
+                .ok_or_else(|| RuntimeError::Custom("subscript: index must be integer".into()))?;
+            let rval = self.eval_expr(rhs)?;
+            let raw = match &rval {
+                Value::Int(n) => *n as u64,
+                Value::UInt(n) => *n,
+                Value::Ptr(p) => *p as u64,
+                Value::Bool(b) => *b as u64,
+                Value::Char(c) => *c as u64,
+                _ => {
+                    return Err(RuntimeError::Custom(
+                        "subscript write: unsupported value".into(),
+                    ))
+                },
+            };
+            let offset = ptr + (i as usize) * 8;
+            self.heap.write_uint(offset, 8, raw)?;
             return Ok(rval);
         }
 

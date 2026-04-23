@@ -577,3 +577,51 @@ fn sizeof_f64() {
         Value::UInt(8)
     );
 }
+
+// ── Phase 2: Struct member access ────────────────────────────────────────────
+
+#[test]
+fn struct_field_write_read() {
+    let src = "class Pt { I64 x; I64 y; }; I64 F() { Pt p; p.x = 3; p.y = 4; return p.x + p.y; }";
+    assert_eq!(call(src, "F", &[]), Value::Int(7));
+}
+
+#[test]
+fn struct_ptr_arrow_access() {
+    let src = "class Pt { I64 x; I64 y; }; I64 F() { Pt* p = MAlloc(16); p->x = 10; p->y = 20; I64 r = p->x + p->y; Free(p); return r; }";
+    assert_eq!(call(src, "F", &[]), Value::Int(30));
+}
+
+#[test]
+fn struct_sizeof() {
+    let src = "class Pair { I64 a; I64 b; }; I64 F() { return sizeof(Pair); }";
+    assert_eq!(call(src, "F", &[]), Value::UInt(16));
+}
+
+#[test]
+fn typedef_as_type() {
+    let src = "typedef I64 Score; I64 F() { Score s = 42; return s; }";
+    assert_eq!(call(src, "F", &[]), Value::Int(42));
+}
+
+#[test]
+fn struct_passed_as_ptr() {
+    let src = "class Vec { I64 x; I64 y; }; \
+               I64 Sum(Vec* v) { return v->x + v->y; } \
+               I64 F() { Vec v; v.x = 5; v.y = 6; return Sum(&v); }";
+    assert_eq!(call(src, "F", &[]), Value::Int(11));
+}
+
+#[test]
+fn nested_struct_field() {
+    let src = "class Inner { I64 n; }; \
+               class Outer { Inner a; I64 b; }; \
+               I64 F() { Outer o; o.a.n = 7; o.b = 3; return o.a.n + o.b; }";
+    assert_eq!(call(src, "F", &[]), Value::Int(10));
+}
+
+#[test]
+fn struct_float_field() {
+    let src = "class Flt { F64 v; }; I64 F() { Flt f; f.v = 2.5; return f.v > 2.0 ? 1 : 0; }";
+    assert_eq!(call(src, "F", &[]), Value::Int(1));
+}

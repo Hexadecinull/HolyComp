@@ -40,16 +40,16 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 
 ---
 
-## Phase 2 — Structs & Member Access
+## Phase 2 — Structs & Member Access ✅ *Done*
 
 **Goal:** `class Foo { I64 x; };  Foo f; f.x = 1;` works end-to-end.
 
-- [ ] Struct layout engine: field offsets, padding, `sizeof(ClassName)`
-- [ ] `TypeEnv` map: `String → StructLayout` threaded through interpreter and parser
-- [ ] `.field` and `->field` access in `vm.rs` via heap offsets
-- [ ] Nested structs and struct arrays
-- [ ] `typedef` resolves through `TypeEnv`
-- [ ] Add `structs.HC` compat test
+- [x] Struct layout engine: field offsets, padding, `sizeof(ClassName)`
+- [x] `TypeEnv` map: `String → StructLayout` threaded through interpreter and parser
+- [x] `.field` and `->field` access in `vm.rs` via heap offsets
+- [x] Nested structs and struct arrays
+- [x] `typedef` resolves through `TypeEnv`
+- [x] Add `structs.HC` compat test
 
 ---
 
@@ -130,7 +130,7 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 |---------|------------------------------------|
 | 0.1     | Phase 0 complete                   |
 | 0.2     | Phase 1 complete (current)         |
-| 0.3-dev | Phase 2 in progress                |
+| 0.2     | Phase 2 complete (current)         |
 | 0.3     | Phase 3 — JIT working              |
 | 0.4     | Phase 4 — AOT working              |
 | 0.5     | Phase 5 + 6                        |
