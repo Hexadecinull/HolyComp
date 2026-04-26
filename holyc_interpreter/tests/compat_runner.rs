@@ -157,3 +157,8 @@ fn compat_recursion() {
 fn compat_structs() {
     assert_output("structs.HC", include_str!("../../tests/compat/structs.HC"));
 }
+
+#[test]
+fn compat_file_io() {
+    assert_output("file_io.HC", include_str!("../../tests/compat/file_io.HC"));
+}

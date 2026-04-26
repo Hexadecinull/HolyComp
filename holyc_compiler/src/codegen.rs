@@ -32,6 +32,39 @@ mod stub {
         pub fn jit_run(&self, _: &str, _: &Module, _: TypeEnv) -> Result<(), CodegenError> {
             Err(CodegenError::Disabled)
         }
+        pub fn emit_object(
+            &self,
+            _: &str,
+            _: &Module,
+            _: TypeEnv,
+            _: &std::path::Path,
+            _: Option<&str>,
+            _: u8,
+        ) -> Result<(), CodegenError> {
+            Err(CodegenError::Disabled)
+        }
+        pub fn emit_asm_file(
+            &self,
+            _: &str,
+            _: &Module,
+            _: TypeEnv,
+            _: &std::path::Path,
+            _: Option<&str>,
+            _: u8,
+        ) -> Result<(), CodegenError> {
+            Err(CodegenError::Disabled)
+        }
+        pub fn emit_executable(
+            &self,
+            _: &str,
+            _: &Module,
+            _: TypeEnv,
+            _: &std::path::Path,
+            _: Option<&str>,
+            _: u8,
+        ) -> Result<(), CodegenError> {
+            Err(CodegenError::Disabled)
+        }
     }
     impl Default for CodegenSession {
         fn default() -> Self {
@@ -55,6 +88,9 @@ mod full {
         types::HolyType,
         TypeEnv,
     };
+    use inkwell::targets::{
+        CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine, TargetTriple,
+    };
     use inkwell::{
         builder::{Builder, BuilderError},
         context::Context,
@@ -65,6 +101,7 @@ mod full {
         },
         AddressSpace, FloatPredicate, IntPredicate, OptimizationLevel,
     };
+    use std::path::Path;
     use thiserror::Error;
 
     // ── Error ─────────────────────────────────────────────────────────────────
@@ -696,7 +733,27 @@ mod full {
                         self.builder.build_unconditional_branch(cont_bb)?;
                     }
                 },
-                StmtKind::Asm(_) => {}, // no-op in codegen
+                StmtKind::Asm(text) => {
+                    // Emit the raw text as an LLVM inline asm call with
+                    // AT&T syntax, sideeffects=true, no I/O constraints.
+                    // This is best-effort: complex asm with inputs/outputs
+                    // requires explicit constraint strings not in the AST yet.
+                    if !text.is_empty() {
+                        let void_fn_ty = self.ctx.void_type().fn_type(&[], false);
+                        let asm_ptr = self.ctx.create_inline_asm(
+                            void_fn_ty,
+                            text.clone(),
+                            String::new(),
+                            true,  // side effects
+                            false, // align stack
+                            Some(inkwell::InlineAsmDialect::ATT),
+                            false, // can throw
+                        );
+                        self.builder
+                            .build_indirect_call(void_fn_ty, asm_ptr, &[], "asm")
+                            .ok();
+                    }
+                },
             }
             Ok(())
         }
@@ -1402,6 +1459,34 @@ mod full {
                 _ => Operand::Int(bv.into_int_value()),
             }
         }
+
+        fn emit_main_trampoline(&mut self) {
+            // Emit `int main() { Main(); return 0; }` if Main() exists but main() does not,
+            // so the system linker can find the AOT entry point.
+            if self.module.get_function("main").is_some() {
+                return;
+            }
+            let Some(holy_main) = self.module.get_function("Main") else {
+                return;
+            };
+            let i32t = self.ctx.i32_type();
+            let main_fn = self
+                .module
+                .add_function("main", i32t.fn_type(&[], false), None);
+            let bb = self.ctx.append_basic_block(main_fn, "entry");
+            self.builder.position_at_end(bb);
+            self.builder.build_call(holy_main, &[], "").ok();
+            self.builder.build_return(Some(&i32t.const_zero())).ok();
+        }
+    }
+
+    fn u8_to_opt(level: u8) -> OptimizationLevel {
+        match level {
+            0 => OptimizationLevel::None,
+            1 => OptimizationLevel::Less,
+            3 => OptimizationLevel::Aggressive,
+            _ => OptimizationLevel::Default,
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -1447,6 +1532,97 @@ mod full {
                 }
             }
             Err(CodegenError::Undefined("no Main() entry point".into()))
+        }
+
+        /// Compile to a native object file.
+        pub fn emit_object(
+            &self,
+            name: &str,
+            ast: &Module,
+            env: TypeEnv,
+            out_path: &Path,
+            target_triple: Option<&str>,
+            opt: u8,
+        ) -> Result<(), CodegenError> {
+            let mut cg = Cg::new(&self.context, name, env);
+            cg.compile_module(ast)?;
+            cg.emit_main_trampoline();
+            let tm = Self::make_tm(target_triple, u8_to_opt(opt))?;
+            tm.write_to_file(&cg.module, FileType::Object, out_path)
+                .map_err(|e| CodegenError::Llvm(e.to_string()))
+        }
+
+        /// Compile to AT&T-syntax assembly.
+        pub fn emit_asm_file(
+            &self,
+            name: &str,
+            ast: &Module,
+            env: TypeEnv,
+            out_path: &Path,
+            target_triple: Option<&str>,
+            opt: u8,
+        ) -> Result<(), CodegenError> {
+            let mut cg = Cg::new(&self.context, name, env);
+            cg.compile_module(ast)?;
+            cg.emit_main_trampoline();
+            let tm = Self::make_tm(target_triple, u8_to_opt(opt))?;
+            tm.write_to_file(&cg.module, FileType::Assembly, out_path)
+                .map_err(|e| CodegenError::Llvm(e.to_string()))
+        }
+
+        /// Compile to a native executable by writing an object file then
+        /// invoking the system `cc` linker.
+        pub fn emit_executable(
+            &self,
+            name: &str,
+            ast: &Module,
+            env: TypeEnv,
+            out_path: &Path,
+            target_triple: Option<&str>,
+            opt: u8,
+        ) -> Result<(), CodegenError> {
+            let obj_path = out_path.with_extension("o");
+            self.emit_object(name, ast, env, &obj_path, target_triple, opt)?;
+            let status = std::process::Command::new("cc")
+                .args([
+                    &obj_path,
+                    std::path::Path::new("-o"),
+                    out_path,
+                    std::path::Path::new("-lm"),
+                ])
+                .status()
+                .map_err(|e| CodegenError::Llvm(format!("cc: {e}")))?;
+            let _ = std::fs::remove_file(&obj_path);
+            if status.success() {
+                Ok(())
+            } else {
+                Err(CodegenError::Llvm(format!("linker failed: {status}")))
+            }
+        }
+
+        fn make_tm(
+            triple_str: Option<&str>,
+            opt: OptimizationLevel,
+        ) -> Result<TargetMachine, CodegenError> {
+            Target::initialize_native(&InitializationConfig::default())
+                .map_err(|e| CodegenError::Llvm(format!("native init: {e}")))?;
+            Target::initialize_all(&InitializationConfig::default());
+            let triple = match triple_str {
+                Some(t) => TargetTriple::create(t),
+                None => TargetMachine::get_default_triple(),
+            };
+            let target = Target::from_triple(&triple)
+                .map_err(|e| CodegenError::Llvm(format!("triple: {e}")))?;
+            target
+                .create_target_machine(
+                    &triple,
+                    "generic",
+                    "",
+                    opt,
+                    RelocMode::PIC,
+                    CodeModel::Default,
+                )
+                .ok_or_else(|| CodegenError::Llvm("TargetMachine creation failed".into()))
         }
     }
 

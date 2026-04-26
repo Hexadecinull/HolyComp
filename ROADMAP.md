@@ -96,12 +96,12 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 ## Phase 6 — Standard Library Expansion
 
 - [x] `StrCpy`, `StrCmp`, `StrCat`, `StrStr`, `StrToI64`
-- [ ] `FileOpen`, `FileClose`, `FileRead`, `FileWrite`, `FileSeek` (host OS shims)
+- [x] `FileOpen`, `FileClose`, `FileRead`, `FileWrite`, `FileSeek` (host OS shims)
 - [x] `Time` / `DateStr` (host clock)
 - [x] `Rand` / `SRand`
 - [x] `MemCmp`
 - [x] `SPrint(buf, fmt, …)` — formatted string to buffer
-- [ ] Document every builtin in `docs/stdlib.md`
+- [x] Document every builtin in `docs/stdlib.md`
 
 ---
 
@@ -131,7 +131,8 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 | 0.1     | Phase 0 complete                   |
 | 0.2     | Phase 1 complete (current)         |
 | 0.2     | Phase 2 complete                   |
-| 0.3     | Phase 3 LLVM JIT complete (current)|
+| 0.3     | Phase 3 LLVM JIT complete          |
+| 0.4     | Phases 4-7 complete (current)      |
 | 0.3     | Phase 3 — JIT working              |
 | 0.4     | Phase 4 — AOT working              |
 | 0.5     | Phase 5 + 6                        |

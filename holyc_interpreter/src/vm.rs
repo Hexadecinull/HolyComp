@@ -90,6 +90,12 @@ impl Interpreter {
         // Memory
         reg!("MemCmp", builtins::memcmp_stub);
         reg!("memcmp", builtins::memcmp_stub);
+        // File I/O
+        reg!("FileOpen", builtins::file_open);
+        reg!("FileClose", builtins::file_close);
+        reg!("FileRead", builtins::file_read);
+        reg!("FileWrite", builtins::file_write);
+        reg!("FileSeek", builtins::file_seek);
         // Heap builtins are handled inline in call_func (need &mut self.heap).
     }
 
@@ -201,8 +207,24 @@ impl Interpreter {
         // String literals are heap-interned pointers. Before passing to builtins
         // that expect Value::Str, resolve any Ptr to a C string from the heap.
         const STR_BUILTINS: &[&str] = &[
-            "Print", "print", "printf", "StrLen", "strlen", "StrCmp", "strcmp", "StrCpy", "strcpy",
-            "StrCat", "strcat", "StrStr", "strstr", "StrToI64",
+            "Print",
+            "print",
+            "printf",
+            "StrLen",
+            "strlen",
+            "StrCmp",
+            "strcmp",
+            "StrCpy",
+            "strcpy",
+            "StrCat",
+            "strcat",
+            "StrStr",
+            "strstr",
+            "StrToI64",
+            "FileOpen",
+            "FileWrite",
+            "SPrint",
+            "sprint",
         ];
         let resolved_args: Vec<Value>;
         let args = if STR_BUILTINS.contains(&name) {

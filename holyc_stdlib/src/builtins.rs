@@ -379,6 +379,141 @@ fn require_str<'a>(val: &'a Value, name: &str) -> Result<&'a str, RuntimeError> 
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
+// ── File I/O ──────────────────────────────────────────────────────────────────
+//
+// These builtins use host OS file descriptors wrapped as `Value::Int`.
+// They mirror the TempleOS `FileOpen`/`FileRead`/`FileWrite`/`FileClose`/`FileSeek`
+// API closely enough that basic file programs port without changes.
+
+use std::collections::HashMap;
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::sync::Mutex;
+
+/// A single open file handle (host OS).
+struct FileHandle {
+    file: std::fs::File,
+}
+
+static FILE_TABLE: Mutex<Option<HashMap<i64, FileHandle>>> = Mutex::new(None);
+
+fn with_table<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut HashMap<i64, FileHandle>) -> R,
+{
+    let mut guard = FILE_TABLE.lock().unwrap();
+    let table = guard.get_or_insert_with(HashMap::new);
+    f(table)
+}
+
+static NEXT_FD: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(3);
+
+fn alloc_fd() -> i64 {
+    NEXT_FD.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
+
+/// `FileOpen(path, flags_str)` → fd (I64) or -1 on error.
+///
+/// `flags_str` mirrors TempleOS: `"r"` read, `"w"` write/create/truncate,
+/// `"a"` append, `"r+"` read+write.
+pub fn file_open(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() < 2 {
+        return Err(argc(2, args.len()));
+    }
+    let path = require_str(&args[0], "FileOpen")?;
+    let flags = require_str(&args[1], "FileOpen")?;
+    let file_result = match flags {
+        "r" => std::fs::File::open(path),
+        "w" => std::fs::File::create(path),
+        "a" => std::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(path),
+        "r+" => std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path),
+        _ => std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(path),
+    };
+    match file_result {
+        Ok(file) => {
+            let fd = alloc_fd();
+            with_table(|t| t.insert(fd, FileHandle { file }));
+            Ok(Value::Int(fd))
+        },
+        Err(_) => Ok(Value::Int(-1)),
+    }
+}
+
+/// `FileClose(fd)` → 0 on success, -1 on error.
+pub fn file_close(args: &[Value]) -> Result<Value, RuntimeError> {
+    let fd = args
+        .first()
+        .and_then(|v| v.as_int())
+        .ok_or_else(|| argc(1, 0))?;
+    let removed = with_table(|t| t.remove(&fd).is_some());
+    Ok(Value::Int(if removed { 0 } else { -1 }))
+}
+
+/// `FileRead(fd, buf_str, len)` → bytes read or -1.
+///
+/// In the interpreter, reads up to `len` bytes and returns them as a
+/// `Value::Str`.  The `buf_str` argument is ignored (no raw pointers here).
+pub fn file_read(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() < 3 {
+        return Err(argc(3, args.len()));
+    }
+    let fd = args[0].as_int().ok_or_else(|| argc(3, args.len()))?;
+    let len = args[2].as_int().unwrap_or(0) as usize;
+    let mut buf = vec![0u8; len];
+    let n = with_table(|t| t.get_mut(&fd).map(|h| h.file.read(&mut buf).unwrap_or(0)));
+    match n {
+        Some(n) => {
+            buf.truncate(n);
+            Ok(Value::Str(String::from_utf8_lossy(&buf).into_owned()))
+        },
+        None => Ok(Value::Int(-1)),
+    }
+}
+
+/// `FileWrite(fd, data_str, len)` → bytes written or -1.
+pub fn file_write(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() < 3 {
+        return Err(argc(3, args.len()));
+    }
+    let fd = args[0].as_int().ok_or_else(|| argc(3, args.len()))?;
+    let data = require_str(&args[1], "FileWrite")?;
+    let len = args[2].as_int().unwrap_or(data.len() as i64) as usize;
+    let bytes = &data.as_bytes()[..len.min(data.len())];
+    let n = with_table(|t| t.get_mut(&fd).map(|h| h.file.write(bytes).unwrap_or(0)));
+    Ok(Value::Int(n.map(|n| n as i64).unwrap_or(-1)))
+}
+
+/// `FileSeek(fd, offset, whence)` → new position or -1.
+///
+/// `whence`: 0 = from start, 1 = from current, 2 = from end.
+pub fn file_seek(args: &[Value]) -> Result<Value, RuntimeError> {
+    if args.len() < 3 {
+        return Err(argc(3, args.len()));
+    }
+    let fd = args[0].as_int().ok_or_else(|| argc(3, args.len()))?;
+    let offset = args[1].as_int().unwrap_or(0);
+    let whence = args[2].as_int().unwrap_or(0);
+    let seek_from = match whence {
+        1 => SeekFrom::Current(offset),
+        2 => SeekFrom::End(offset),
+        _ => SeekFrom::Start(offset as u64),
+    };
+    let pos = with_table(|t| {
+        t.get_mut(&fd)
+            .map(|h| h.file.seek(seek_from).ok().map(|p| p as i64))
+    });
+    Ok(Value::Int(pos.flatten().unwrap_or(-1)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

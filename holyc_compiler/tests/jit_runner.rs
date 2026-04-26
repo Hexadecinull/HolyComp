@@ -170,3 +170,49 @@ fn emit_ir_contains_define() {
     );
     assert!(ir.contains("@printf"), "IR must reference printf:\n{ir}");
 }
+
+// ── AOT native executable test ─────────────────────────────────────────────────
+
+#[test]
+fn aot_hello_native_executable() {
+    use std::process::Command;
+
+    let src = include_str!("../../tests/compat/hello.HC");
+    let out = std::env::temp_dir().join("holyc_aot_test_hello");
+
+    let tokens = Lexer::new(src).tokenize().unwrap();
+    let module = Parser::new(tokens).parse_module().unwrap();
+    CodegenSession::new()
+        .emit_executable("hello.HC", &module, TypeEnv::new(), &out, None, 2)
+        .expect("AOT link failed");
+
+    assert!(out.exists(), "executable not created");
+
+    let output = Command::new(&out)
+        .output()
+        .expect("failed to run native executable");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "Hello, World!", "wrong output: {stdout:?}");
+
+    let _ = std::fs::remove_file(&out);
+}
+
+#[test]
+fn aot_emit_asm_file() {
+    let src = "U0 Main() { Print(\"hi\\n\"); }";
+    let out = std::env::temp_dir().join("holyc_aot_test.s");
+
+    let tokens = Lexer::new(src).tokenize().unwrap();
+    let module = Parser::new(tokens).parse_module().unwrap();
+    CodegenSession::new()
+        .emit_asm_file("test.HC", &module, TypeEnv::new(), &out, None, 2)
+        .expect("emit_asm failed");
+
+    let asm = std::fs::read_to_string(&out).expect("could not read asm");
+    assert!(
+        asm.contains("call"),
+        "asm should contain a call instruction:\n{asm}"
+    );
+    let _ = std::fs::remove_file(&out);
+}
