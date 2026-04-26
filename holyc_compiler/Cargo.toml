@@ -5,15 +5,34 @@ edition.workspace    = true
 license.workspace    = true
 authors.workspace    = true
 repository.workspace = true
-description = "LLVM-based JIT/AOT compiler backend for HolyC (inkwell)"
+description = "LLVM-based JIT/AOT compiler backend for HolyC"
+
+[lib]
+name = "holyc_compiler"
+path = "src/lib.rs"
 
 [[bin]]
 name = "holyc-compile"
 path = "src/main.rs"
 
+[features]
+# Enable the full LLVM JIT/AOT pipeline.  Requires LLVM 17 headers on the
+# host (e.g. `apt install llvm-17-dev`).  Without this feature the binary
+# still parses and validates HolyC source but cannot compile to native code.
+jit = ["dep:inkwell", "dep:clap", "dep:libc"]
+
 [dependencies]
 holyc_frontend = { workspace = true }
+holyc_stdlib   = { workspace = true }
 thiserror = { workspace = true }
-# Re-enable with toolchain >= 1.77:
-# clap = { workspace = true }
-# inkwell = { version = "0.4", features = ["llvm17-0"] }
+clap    = { version = "4", features = ["derive"], optional = true }
+libc    = { version = "0.2", optional = true }
+
+[dependencies.inkwell]
+version  = "0.4"
+features = ["llvm17-0"]
+optional = true
+
+[dev-dependencies]
+libc = "0.2"
+holyc_stdlib = { workspace = true }

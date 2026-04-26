@@ -130,7 +130,8 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 |---------|------------------------------------|
 | 0.1     | Phase 0 complete                   |
 | 0.2     | Phase 1 complete (current)         |
-| 0.2     | Phase 2 complete (current)         |
+| 0.2     | Phase 2 complete                   |
+| 0.3     | Phase 3 LLVM JIT complete (current)|
 | 0.3     | Phase 3 — JIT working              |
 | 0.4     | Phase 4 — AOT working              |
 | 0.5     | Phase 5 + 6                        |
