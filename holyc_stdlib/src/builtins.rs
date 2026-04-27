@@ -427,6 +427,7 @@ pub fn file_open(args: &[Value]) -> Result<Value, RuntimeError> {
         "a" => std::fs::OpenOptions::new()
             .append(true)
             .create(true)
+            .truncate(false)
             .open(path),
         "r+" => std::fs::OpenOptions::new()
             .read(true)
@@ -436,6 +437,7 @@ pub fn file_open(args: &[Value]) -> Result<Value, RuntimeError> {
             .read(true)
             .write(true)
             .create(true)
+            .truncate(false)
             .open(path),
     };
     match file_result {
