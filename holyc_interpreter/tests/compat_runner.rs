@@ -161,4 +161,6 @@ fn compat_structs() {
 #[test]
 fn compat_file_io() {
     assert_output("file_io.HC", include_str!("../../tests/compat/file_io.HC"));
+    // Clean up the temp file the test creates; ignore errors (file may not exist).
+    let _ = std::fs::remove_file("_holyc_test_tmp.txt");
 }
