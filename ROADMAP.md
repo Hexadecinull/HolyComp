@@ -35,7 +35,7 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 - [x] Implement `arr[i]` subscript for heap-allocated arrays
 - [x] String literals → heap-allocated null-terminated bytes; `%s` reads from heap
 - [x] `MemSet(ptr, val, len)` and `MemCpy(dst, src, len)` real implementations
-- [ ] Add `--heap-size` CLI flag (default: 64 MiB)
+- [x] Add `--heap-size` CLI flag (default: 64 MiB)
 - [x] Add `pointer.HC` compat test
 
 ---
@@ -132,7 +132,8 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 | 0.2     | Phase 1 complete (current)         |
 | 0.2     | Phase 2 complete                   |
 | 0.3     | Phase 3 LLVM JIT complete          |
-| 0.4     | Phases 4-7 complete (current)      |
+| 0.4     | Phases 4-7 complete                |
+| 0.5     | Tooling: fmt, LSP, tree-sitter (current)|
 | 0.3     | Phase 3 — JIT working              |
 | 0.4     | Phase 4 — AOT working              |
 | 0.5     | Phase 5 + 6                        |

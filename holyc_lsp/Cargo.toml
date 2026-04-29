@@ -1,0 +1,17 @@
+[package]
+name        = "holyc_lsp"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+authors.workspace    = true
+repository.workspace = true
+description = "Language Server Protocol stub for HolyC"
+
+[[bin]]
+name = "holyc-lsp"
+path = "src/main.rs"
+
+[dependencies]
+holyc_frontend = { workspace = true }
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"

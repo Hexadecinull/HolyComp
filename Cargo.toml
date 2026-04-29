@@ -3,6 +3,7 @@ members = [
     "holyc_frontend",
     "holyc_interpreter",
     "holyc_compiler",
+    "holyc_lsp",
     "holyc_stdlib",
 ]
 resolver = "2"

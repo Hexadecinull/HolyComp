@@ -15,6 +15,10 @@ path = "src/lib.rs"
 name = "holyc"
 path = "src/main.rs"
 
+[[bin]]
+name = "holyc-fmt"
+path = "src/fmt_main.rs"
+
 [dependencies]
 holyc_frontend = { workspace = true }
 holyc_stdlib   = { workspace = true }

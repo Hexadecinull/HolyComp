@@ -1,0 +1,19 @@
+{
+  "name": "tree-sitter-holyc",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for HolyC (TempleOS dialect)",
+  "main": "bindings/node",
+  "keywords": ["tree-sitter", "holyc", "templeos", "parser"],
+  "license": "MIT",
+  "dependencies": {
+    "nan": "*"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.21"
+  },
+  "scripts": {
+    "generate": "tree-sitter generate",
+    "test":     "tree-sitter test",
+    "build":    "node-gyp build"
+  }
+}

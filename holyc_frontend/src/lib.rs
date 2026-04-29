@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod diag;
 pub mod error;
+pub mod fmt;
 pub mod layout;
 pub mod lexer;
 pub mod parser;
@@ -13,3 +14,5 @@ pub use lexer::Lexer;
 pub use parser::Parser;
 
 pub use diag::Diagnostic;
+
+pub use fmt::format_module;

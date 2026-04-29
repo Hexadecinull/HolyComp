@@ -1,0 +1,26 @@
+{
+  "name": "holyc",
+  "displayName": "HolyC",
+  "description": "HolyC language support for VS Code",
+  "version": "0.1.0",
+  "publisher": "holycomp",
+  "license": "MIT",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages"],
+  "keywords": ["HolyC", "TempleOS"],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "holyc",
+      "aliases": ["HolyC", "holyc"],
+      "extensions": [".HC", ".hc"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "holyc",
+      "scopeName": "source.holyc",
+      "path": "./syntaxes/holyc.tmLanguage.json"
+    }]
+  }
+}
