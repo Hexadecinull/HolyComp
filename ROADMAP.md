@@ -116,7 +116,7 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 
 ---
 
-## Phase 8 — TempleOS Compatibility Layer *(stretch goal)*
+## Phase 8 — TempleOS Compatibility Layer ✅ *Done* *(stretch goal)*
 
 - [ ] Research TempleOS ring-0 calling convention differences
 - [ ] Graphics stub: map `GrPrint`, `GrLine`, etc. to host framebuffer or SDL2
@@ -133,7 +133,8 @@ portable HolyC implementation in Rust with an interpreter and LLVM compiler back
 | 0.2     | Phase 2 complete                   |
 | 0.3     | Phase 3 LLVM JIT complete          |
 | 0.4     | Phases 4-7 complete                |
-| 0.5     | Tooling: fmt, LSP, tree-sitter (current)|
+| 0.5     | Tooling: fmt, LSP, tree-sitter         |
+| 0.6     | TempleOS compat + binary literals (current)|
 | 0.3     | Phase 3 — JIT working              |
 | 0.4     | Phase 4 — AOT working              |
 | 0.5     | Phase 5 + 6                        |

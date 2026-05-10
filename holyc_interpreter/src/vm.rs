@@ -96,6 +96,32 @@ impl Interpreter {
         reg!("FileRead", builtins::file_read);
         reg!("FileWrite", builtins::file_write);
         reg!("FileSeek", builtins::file_seek);
+        // TempleOS compatibility shims
+        {
+            use holyc_stdlib::templeos;
+            reg!("GrPrint", templeos::gr_print);
+            reg!("DocPrint", templeos::doc_print);
+            reg!("DocPutS", templeos::doc_puts);
+            reg!("GrWidth", templeos::gr_width);
+            reg!("GrHeight", templeos::gr_height);
+            reg!("GrLine", templeos::gr_line);
+            reg!("GrRect", templeos::gr_rect);
+            reg!("GrFillRect", templeos::gr_fill_rect);
+            reg!("GrCircle", templeos::gr_circle);
+            reg!("GrFlush", templeos::gr_flush);
+            reg!("GrCls", templeos::gr_cls);
+            reg!("Sleep", templeos::sleep);
+            reg!("SleepUs", templeos::sleep_us);
+            reg!("ChkPtr", templeos::chk_ptr);
+            reg!("IsPtrValid", templeos::is_ptr_valid);
+            reg!("GetTicks", templeos::get_ticks);
+            reg!("GetKey", templeos::get_key);
+            reg!("ScanKey", templeos::scan_key);
+            reg!("Beep", templeos::beep);
+            reg!("MusicNote", templeos::music_note);
+            reg!("MemUsed", templeos::mem_used);
+            reg!("ProgPatchU8", templeos::prog_patch_u8);
+        }
         // Heap builtins are handled inline in call_func (need &mut self.heap).
     }
 
@@ -225,6 +251,9 @@ impl Interpreter {
             "FileWrite",
             "SPrint",
             "sprint",
+            "DocPrint",
+            "DocPutS",
+            "GrPrint",
         ];
         let resolved_args: Vec<Value>;
         let args = if STR_BUILTINS.contains(&name) {

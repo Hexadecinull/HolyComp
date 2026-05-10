@@ -1,21 +1,26 @@
-//! Interactive REPL for HolyC.
+//! Interactive REPL for the HolyC interpreter.
 //!
-//! Uses plain `std::io::stdin` for portability.
-//! When rustyline is re-enabled (toolchain >= 1.77), swap the `read_line`
-//! implementation below for the rustyline version in `repl_rustyline.rs`.
+//! Reads source line-by-line, accumulates multi-line input until the parser
+//! signals completion, then executes the parsed module.  Error diagnostics
+//! are rendered using [`holyc_frontend::diag`] for rustc-style output.
+
+use std::io::{self, BufRead, Write};
+
+use holyc_frontend::{
+    diag::{from_lex_error, from_parse_error},
+    error::ParseError,
+    Lexer, Parser,
+};
 
 use crate::vm::Interpreter;
-use holyc_frontend::{Lexer, Parser};
-use std::io::{self, BufRead, Write};
 
 const BANNER: &str = "\
   _   _       _        _____
  | | | | ___ | |_   _ / ____|
  | |_| |/ _ \\| | | | | |
  |  _  | (_) | | |_| | |___
- |_| |_|\\___/|_|\\__, |\\_____|
-                 __/ |
-                |___/   HolyComp REPL  (type :help for commands)
+ |_| |_|\\___/|_|\\__, |\\____|  HolyC REPL
+                |___/  type :help for commands
 ";
 
 pub fn start() {
@@ -32,8 +37,8 @@ pub fn start() {
         {
             let mut out = stdout.lock();
             let prompt = if buf.is_empty() { "hc> " } else { "... " };
-            let _ = out.write_all(prompt.as_bytes());
-            let _ = out.flush();
+            write!(out, "{prompt}").ok();
+            out.flush().ok();
         }
 
         // Read a line
@@ -61,11 +66,11 @@ pub fn start() {
 fn handle_line(interp: &mut Interpreter, buf: &mut String, line: String) {
     match line.trim() {
         ":help" | ":h" => {
-            println!("Commands:");
-            println!("  :help     — this message");
-            println!("  :quit     — exit the REPL");
-            println!("  :clear    — discard buffered input");
+            println!("  :help     — this help");
             println!("  :reset    — reset interpreter state");
+            println!("  :clear    — clear the input buffer");
+            println!("  :quit     — exit");
+            println!("  :heap     — show heap statistics");
             println!("  Anything else is executed as HolyC source.");
             return;
         },
@@ -83,6 +88,15 @@ fn handle_line(interp: &mut Interpreter, buf: &mut String, line: String) {
             println!("Interpreter reset.");
             return;
         },
+        ":heap" => {
+            println!(
+                "heap: {}/{} bytes used, {} live allocations",
+                interp.heap.used_bytes(),
+                interp.heap.capacity(),
+                interp.heap.live_allocs()
+            );
+            return;
+        },
         "" => return,
         _ => {},
     }
@@ -90,27 +104,30 @@ fn handle_line(interp: &mut Interpreter, buf: &mut String, line: String) {
     buf.push_str(&line);
     buf.push('\n');
 
+    // Try to lex and parse; keep buffering on unexpected EOF.
     let tokens = match Lexer::new(buf).tokenize() {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("lex error: {e}");
+            let diag = from_lex_error(&e, buf, Some("<repl>"));
+            eprintln!("{diag}");
             buf.clear();
             return;
         },
     };
 
-    match Parser::new(tokens).parse_module() {
+    match Parser::new_with_src(tokens, buf.as_str()).parse_module() {
         Ok(module) => {
-            buf.clear();
             if let Err(e) = interp.exec_module(&module) {
                 eprintln!("runtime error: {e}");
             }
+            buf.clear();
         },
-        Err(holyc_frontend::error::ParseError::UnexpectedEof { .. }) => {
-            // Keep buffering — user hasn't finished the expression/block.
+        Err(ParseError::UnexpectedEof { .. }) => {
+            // Keep buffering — user hasn't finished the block.
         },
         Err(e) => {
-            eprintln!("parse error: {e}");
+            let diag = from_parse_error(&e, buf, None, Some("<repl>"));
+            eprintln!("{diag}");
             buf.clear();
         },
     }

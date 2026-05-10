@@ -232,6 +232,20 @@ impl<'src> Lexer<'src> {
             return Ok((Token::IntLit(val), (start, self.pos)));
         }
 
+        // Binary: 0b / 0B
+        if self.peek() == Some('0') && matches!(self.peek2(), Some('b') | Some('B')) {
+            self.advance();
+            self.advance(); // consume 0b
+            let bin_start = self.pos;
+            while matches!(self.peek(), Some('0') | Some('1')) {
+                self.advance();
+            }
+            let digits = &self.src[bin_start..self.pos];
+            let val =
+                u64::from_str_radix(digits, 2).map_err(|_| LexError::IntegerOverflow { line })?;
+            return Ok((Token::IntLit(val), (start, self.pos)));
+        }
+
         // Consume leading digits
         while self.peek().map(|c| c.is_ascii_digit()).unwrap_or(false) {
             self.advance();

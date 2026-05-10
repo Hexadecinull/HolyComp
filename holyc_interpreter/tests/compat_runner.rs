@@ -164,3 +164,29 @@ fn compat_file_io() {
     // Clean up the temp file the test creates; ignore errors (file may not exist).
     let _ = std::fs::remove_file("_holyc_test_tmp.txt");
 }
+
+#[test]
+fn compat_templeos() {
+    assert_output(
+        "templeos.HC",
+        include_str!("../../tests/compat/templeos.HC"),
+    );
+}
+
+#[test]
+fn compat_ternary_chain() {
+    assert_output(
+        "ternary_chain.HC",
+        include_str!("../../tests/compat/ternary_chain.HC"),
+    );
+}
+
+#[test]
+fn compat_bitops() {
+    assert_output("bitops.HC", include_str!("../../tests/compat/bitops.HC"));
+}
+
+#[test]
+fn compat_scope() {
+    assert_output("scope.HC", include_str!("../../tests/compat/scope.HC"));
+}
