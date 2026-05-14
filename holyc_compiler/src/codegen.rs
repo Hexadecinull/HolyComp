@@ -1,7 +1,8 @@
 //! LLVM IR code generation for HolyC.
 //!
 //! Guarded behind the `jit` Cargo feature so the crate compiles on hosts
-//! without LLVM headers.  Enable with `--features jit` (requires llvm-17-dev).
+//! without LLVM.  Enable with `--features jit` (LLVM 17 via `llvm-config`;
+//! links the shared `libLLVM` first to match typical distro packages).
 
 // ── Feature-off stub ─────────────────────────────────────────────────────────
 

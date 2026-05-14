@@ -16,10 +16,20 @@ name = "holyc-compile"
 path = "src/main.rs"
 
 [features]
-# Enable the full LLVM JIT/AOT pipeline.  Requires LLVM 17 headers on the
-# host (e.g. `apt install llvm-17-dev`).  Without this feature the binary
+# Enable the full LLVM JIT/AOT pipeline.  Requires LLVM 17 (`llvm-config`,
+# headers, and a shared `libLLVM-17` on typical Linux installs, e.g.
+# `apt install llvm-17-dev` on Debian/Ubuntu).  Without this feature the binary
 # still parses and validates HolyC source but cannot compile to native code.
-jit = ["dep:inkwell", "dep:clap", "dep:libc"]
+#
+# `llvm17-0-prefer-dynamic`: link libLLVM-17.so first so `llvm-sys` does not
+# pull every static archive (including Polly), which many distro LLVM packages
+# omit — fixing "could not find native static library Polly".
+jit = [
+    "dep:inkwell",
+    "dep:clap",
+    "dep:libc",
+    "inkwell/llvm17-0-prefer-dynamic",
+]
 
 [dependencies]
 holyc_frontend = { workspace = true }
@@ -30,7 +40,6 @@ libc    = { version = "0.2", optional = true }
 
 [dependencies.inkwell]
 version  = "0.4"
-features = ["llvm17-0"]
 optional = true
 
 [dev-dependencies]
